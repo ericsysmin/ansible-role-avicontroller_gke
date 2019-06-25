@@ -1,0 +1,30 @@
+---
+avi_controller_k8s_service:
+  kind: Service
+  apiVersion: v1
+  metadata:
+    name: "service-{{ avi_namespace }}"
+    namespace: "{{ avi_namespace }}"
+    labels:
+      svc: "service-{{ avi_namespace }}"
+  spec:
+    ports:
+      - name: ssh
+        port: 22
+        targetPort: ssh
+      - name: http
+        port: 80
+        targetPort: http
+      - name: securechannel
+        port: 5098
+        targetPort: securechannel
+      - name: cluster
+        port: 8443
+        targetPort: cluster
+      - name: https
+        port: 443
+        targetPort: https
+    selector:
+      app: "controller-cluster-{{ avi_namespace }}"
+    clusterIP: None
+    type: ClusterIP

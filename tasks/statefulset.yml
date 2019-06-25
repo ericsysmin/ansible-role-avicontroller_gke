@@ -1,0 +1,10 @@
+---
+- name: Avi Controller | GKE | Create controller external service
+  k8s:
+    state: present
+    resource_definition: "{{ avi_controller_k8s_external_service }}"
+
+- name: Avi Controller | GKE | Create controller statefulset
+  k8s:
+    state: present
+    resource_definition: "{{ avi_controller_k8s_statefulset }}"

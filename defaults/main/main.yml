@@ -1,0 +1,13 @@
+---
+# defaults file for avinetworks.avicontroller_gke
+
+avi_controller_count: 1
+avi_controller_prefix: avicontroller
+
+avi_controller_storage_class_name: "{{ avi_controller_prefix }}-regionalpd-storageclass-ssd"
+
+avi_controller_disk_size: 64Gi
+avi_controller_version: 18.2.3-9063-20190501.224326
+
+avi_controller_container_image: avinetworks/controller:{{ avi_controller_version }}
+avi_persistent_disk_name: "{{ avi_controller_prefix }}-{{ avi_namespace }}-{{ index }}-disk"

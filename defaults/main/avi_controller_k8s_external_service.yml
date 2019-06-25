@@ -1,0 +1,31 @@
+---
+avi_controller_k8s_external_service:
+  kind: Service
+  apiVersion: v1
+  metadata:
+    name: "external-service-{{ avi_namespace }}-{{ item.index }}"
+    namespace: "{{ avi_namespace }}"
+    labels:
+      svc: "external-service-{{ avi_namespace }}-{{ item.index }}"
+  spec:
+    externalTrafficPolicy: Local
+    ports:
+      - name: ssh
+        port: 22
+        targetPort: ssh
+      - name: http
+        port: 80
+        targetPort: http
+      - name: securechannel
+        port: 5098
+        targetPort: securechannel
+      - name: cluster
+        port: 8443
+        targetPort: cluster
+      - name: https
+        port: 443
+        targetPort: https
+    selector:
+      controller: "controller-{{ avi_namespace }}-{{ item.index }}"
+    type: LoadBalancer
+    loadBalancerIP: "{{ item.address }}"

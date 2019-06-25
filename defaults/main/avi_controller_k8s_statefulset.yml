@@ -1,0 +1,102 @@
+---
+# spec.selector.matchLabels needs to match .spec.template.metadata.labels
+# spec.template.metadata.labels needs to match .spec.selector.matchLabels
+
+avi_controller_k8s_statefulset:
+  apiVersion: apps/v1
+  kind: StatefulSet
+  metadata:
+    name: "node-{{ item.index }}"
+    namespace: "{{ avi_namespace }}"
+  spec:
+    selector:
+      matchLabels:
+        app: "controller-cluster-{{ avi_namespace }}"
+        controller: "controller-{{ avi_namespace }}-{{ item.index }}"
+    replicas: 1
+    serviceName: "service-{{ avi_namespace }}"
+    template:
+      metadata:
+        namespace: "{{ avi_namespace }}"
+        labels:
+          app: "controller-cluster-{{ avi_namespace }}"
+          controller: "controller-{{ avi_namespace }}-{{ item.index }}"
+      spec:
+        affinity: "{{ avi_controller_affinity | default(omit) }}"
+        nodeSelector: "{{ avi_controller_nodeselector | default(omit) }}"
+        containers:
+          - name: node
+            image: "{{ avi_controller_container_image }}"
+            resources:
+              requests:
+                cpu: 3
+                memory: 16Gi
+            env:
+              - name: MY_NODE_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: spec.nodeName
+              - name: MY_POD_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: MANAGEMENT_IP
+                value: "$(MY_POD_NAME).service-{{ avi_namespace }}.{{ avi_namespace }}.svc.cluster.local"
+              - name: NUM_CPU
+                value: '8'
+              - name: NUM_MEMG
+                value: '30'
+              - name: DISK_GB
+                value: '100'
+              - name: CNTRL_SSH_PORT
+                value: '5098'
+              - name: SAAS_CONTROLLER
+                value: 'true'
+            ports:
+              - containerPort: 8443
+                name: cluster
+              - containerPort: 80
+                name: http
+              - containerPort: 443
+                name: https
+              - containerPort: 5098
+                name: securechannel
+              - containerPort: 22
+                name: ssh
+            volumeMounts:
+              - mountPath: /vol
+                name: vol
+              - mountPath: /var/run/docker.sock
+                name: run
+              - mountPath: /hostroot
+                name: hostroot
+              - mountPath: /run/xtables.lock
+                name: xtables
+              - mountPath: /dev
+                name: devroot
+            securityContext:
+              privileged: true
+        serviceAccount: default
+        volumes:
+          - hostPath:
+              path: /var/run/docker.sock
+            name: run
+          - hostPath:
+              path: /
+            name: hostroot
+          - hostPath:
+              path: /run/xtables.lock
+            name: xtables
+          - hostPath:
+              path: /dev
+            name: devroot
+    volumeClaimTemplates:
+      - metadata:
+          name: vol
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: "{{ avi_controller_storage_class_name }}"
+          resources:
+            requests:
+              storage: "{{ avi_controller_disk_size }}"

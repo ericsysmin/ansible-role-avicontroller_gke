@@ -1,0 +1,29 @@
+---
+- name: Avi Controller | GKE | Assert correct controller count
+  assert:
+    that: avi_controller_count is odd
+    fail_msg: "Failed: Controller count must be odd number for a proper quorum"
+    success_msg: "Passed: Controller count is odd and will be a quorum"
+
+- name: Avi Controller | GKE | Check if namespace exists
+  k8s_facts:
+    api_version: v1
+    kind: Namespace
+    name: "{{ avi_namespace }}"
+  register: existing_namespace
+
+- name: Avi Controller | GKE | Check if StatefulSet already exists
+  k8s_facts:
+    api_version: v1
+    kind: StatefulSet
+    name: node-0
+    namespace: "{{ avi_namespace }}"
+  register: existing_statefulset
+  when: existing_namespace.resources|length > 0
+
+- name: Avi Controller | GKE | Set Facts if it exists
+  set_fact:
+    avi_controller_container_image: "{{ existing_statefulset.resources[0].spec.template.spec.containers[0].image }}"
+  when:
+    - existing_namespace.resources|length > 0
+    - existing_statefulset.resources|length > 0
