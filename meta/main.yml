@@ -1,6 +1,6 @@
 ---
 galaxy_info:
-  role_name: avicontroller_gke
+  role_name: avicontroller-gke
   author: ericsysmin <eanderson@avinetworks.com>
   description: Ansible role to deploy the Avi Controller on GKE
   company: Avi Networks, Inc.
