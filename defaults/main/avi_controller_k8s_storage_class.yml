@@ -8,5 +8,5 @@ avi_controller_k8s_storage_class:
   parameters:
     type: pd-ssd
     replication-type: regional-pd
-  reclaimPolicy: Retain
+  reclaimPolicy: Delete
   volumeBindingMode: WaitForFirstConsumer

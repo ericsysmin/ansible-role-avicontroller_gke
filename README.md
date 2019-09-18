@@ -62,25 +62,30 @@ that can/should be set via parameters to the role. Any variables that are read
 from other roles and/or the global scope (ie. hostvars, group vars, etc.) should
 be mentioned here as well.
 
-### Required Variables
+### Variables
 
-| Variable                            | Required | Default                                                   | Comments                                                      |
-| ----------------------------------- | -------- | --------------------------------------------------------- | ------------------------------------------------------------- |
-| `avi_namespace`                     | Yes      |                                                           | Namespace that the controller should be created in            |
-| `avi_controller_count`              | No       | `1`                                                       | How many controllers we should create. ex. 1 or 3             |
-| `avi_controller_prefix`             | No       | `avi-controller`                                          | Prefix that the name of the controller and assets should have |
-| `avi_gcp_region`                    | No       |                                                           |                                                               |
-| `avi_gcp_project`                   | No       |                                                           |                                                               |
-| `avi_gcp_auth_kind`                 | No       |                                                           |                                                               |
-| `avi_gcp_service_account_file`      | No       |                                                           |                                                               |
-| `avi_controller_storage_class_name` | No       | `{{ avi_controller_prefix }}-regionalpd-storageclass-ssd` |                                                               |
-| `avi_controller_disk_size`          | No       | `64Gi`                                                    |                                                               |
-| `avi_controller_version`            | No       | `18.2.3-9063-20190501.224326`                             | Version of Avi that should be used on the pod                 |
-| `avi_controller_container_image`    | No       | `avinetworks/controller:{{ avi_controller_version }}`     | The image that will be used to create the controller pod      |
-| `avi_controller_namespace_lables`   | No       | `None`                                                    |                                                               |
-| `avi_gcp_compute_addresses`         | No       | `Auto-generated`                                          | Array of compute addresses created by role for controllers    |
-| `avi_controller_affinity`           | No       | `None`                                                    | Sets the k8s affinity of the controller pod                   |
-| `avi_controller_nodeselector`       | No       | `None`                                                    | Sets the nodeSelector for the controller pod                  |
+| Variable                            | Required     | Default                                                   | Comments                                                                         |
+| ----------------------------------- | ------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `avi_namespace`                     | Yes          |                                                           | Namespace that the controller should be created in                               |
+| `avi_controller_state`              | No           | `present`                                                 | Sets the state of the deployment. ex. `present`, `absent`, `suspended`, `resume` |
+| `avi_force_state`                   | No           | `false`                                                   | Allows forcing to state of the deployment. Skips checks. `true`, `false`         |
+| `avi_controller_count`              | No           | `1`                                                       | How many controllers we should create. ex. `1` or `3`                            |
+| `avi_controller_prefix`             | No           | `avi-controller`                                          | Prefix that the name of the controller and assets should have                    |
+| `avi_controller_username`           | Yes (absent) | `admin`                                                   | Only required when state is absent used for verifying no SE or Virtual Services  |
+| `avi_controller_password`           | Yes (absent) | `None`                                                    | Only required when state is absent used for verifying no SE or Virtual Services  |
+| `avi_gcp_region`                    | No           |                                                           | GCP region that we want to deploy the controller to                              |
+| `avi_gcp_project`                   | No           |                                                           | GCP project that the controller should be deployed in                            |
+| `avi_gcp_auth_kind`                 | No           |                                                           | Type of authentication to GCP to use                                             |
+| `avi_gcp_service_account_file`      | No           |                                                           | Location of the service_account_file when using serviceaccount                   |
+| `avi_k8s_auth_kubeconfig`           | No           | `{{ ansible_env.HOME }}/.kube/config`                     | Location of the kubeconfig that we will use                                      |
+| `avi_controller_storage_class_name` | No           | `{{ avi_controller_prefix }}-regionalpd-storageclass-ssd` | Name of the storage class to be used by the controller disk                      |
+| `avi_controller_disk_size`          | No           | `64`                                                      | Controller disk size in GB                                                       |
+| `avi_controller_version`            | No           | `18.2.3-9063-20190501.224326`                             | Version of Avi that should be used on the pod                                    |
+| `avi_controller_container_image`    | No           | `avinetworks/controller:{{ avi_controller_version }}`     | The image that will be used to create the controller pod                         |
+| `avi_controller_namespace_labels`   | No           | `None`                                                    | K8s labels you'd like to attach to the namespace                                 |
+| `avi_gcp_compute_addresses`         | No           | `Auto-generated`                                          | Array of compute addresses created by role for controllers                       |
+| `avi_controller_affinity`           | No           | `None`                                                    | Sets the k8s affinity of the controller pod                                      |
+| `avi_controller_nodeselector`       | No           | `None`                                                    | Sets the nodeSelector for the controller pod                                     |
 
 ### Advanced variables
 
@@ -103,7 +108,14 @@ A list of other roles hosted on Galaxy should go here, plus any details in
 regards to parameters that may need to be set for other roles, or variables that
 are used from other roles.
 
+## Usage
+
+Please note when resuming a deployment, it is not different than present when making  
+please use `deployment_state: present` when resuming a suspended deployment.
+
 ## Example Playbook
+
+### Creating a controller cluster
 
 Including an example of how to use your role (for instance, with variables
 passed in as parameters) is always nice for users too:
@@ -120,7 +132,7 @@ passed in as parameters) is always nice for users too:
       avi_gcp_auth_kind: serviceaccount
       avi_gcp_service_account_file: ~/service_account_file.json
       avi_namespace: 26abc3b9d1fc4cfc8f42ad86d9606fb9
-      avi_controller_disk_size: 64Gi
+      avi_controller_disk_size: 64
       avi_controller_container_image: "gcr.io/{{ avi_gcp_project }}/controller:{{ avi_controller_version }}"
       avi_controller_storage_class_name: regionalpd-storageclass-ssd
       avi_controller_affinity:
@@ -146,7 +158,32 @@ passed in as parameters) is always nice for users too:
       avi_gcp_auth_kind: serviceaccount
       avi_gcp_service_account_file: ~/service_account_file.json
       avi_namespace: 26abc3b9d1fc4cfc8f42ad86d9606fb9
-      avi_controller_disk_size: 64Gi
+      avi_controller_disk_size: 64
+      avi_controller_container_image: "gcr.io/{{ avi_gcp_project }}/controller:{{ avi_controller_version }}"
+      avi_controller_storage_class_name: regionalpd-storageclass-ssd
+      avi_controller_nodeselector:
+        node_label: label_value
+```
+
+### Deleting a controller cluster
+
+When you are deleting a controller cluster we check and make sure that you do not have any current VS's or Service engines
+so that you do not end up with orphaned service engines.
+
+```yaml
+- hosts: servers
+  roles:
+    - role: avinetworks.avicontroller_gke
+      avi_controller_state: absent
+      avi_controller_count: 3
+      avi_controller_version: 18.2.3-9063-20190501.224326
+      avi_controller_prefix: deployment-address
+      avi_gcp_project: my-project
+      avi_gcp_region: us-west1
+      avi_gcp_auth_kind: serviceaccount
+      avi_gcp_service_account_file: ~/service_account_file.json
+      avi_namespace: 26abc3b9d1fc4cfc8f42ad86d9606fb9
+      avi_controller_disk_size: 64
       avi_controller_container_image: "gcr.io/{{ avi_gcp_project }}/controller:{{ avi_controller_version }}"
       avi_controller_storage_class_name: regionalpd-storageclass-ssd
       avi_controller_nodeselector:

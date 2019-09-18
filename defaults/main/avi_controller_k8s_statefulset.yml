@@ -3,7 +3,7 @@
 # spec.template.metadata.labels needs to match .spec.selector.matchLabels
 
 avi_controller_k8s_statefulset:
-  apiVersion: apps/v1
+  apiVersion: apps/v1beta1
   kind: StatefulSet
   metadata:
     name: "node-{{ item.index }}"
@@ -13,7 +13,7 @@ avi_controller_k8s_statefulset:
       matchLabels:
         app: "controller-cluster-{{ avi_namespace }}"
         controller: "controller-{{ avi_namespace }}-{{ item.index }}"
-    replicas: 1
+    replicas: "{{ avi_statefulset_replicas }}"
     serviceName: "service-{{ avi_namespace }}"
     template:
       metadata:
@@ -47,7 +47,7 @@ avi_controller_k8s_statefulset:
               - name: NUM_MEMG
                 value: '30'
               - name: DISK_GB
-                value: '100'
+                value: "{{ avi_controller_disk_size }}"
               - name: CNTRL_SSH_PORT
                 value: '5098'
               - name: SAAS_CONTROLLER
@@ -74,6 +74,12 @@ avi_controller_k8s_statefulset:
                 name: xtables
               - mountPath: /dev
                 name: devroot
+              - mountPath: /opt/avi/controller/data/setup.json
+                subPath: setup.json
+                name: controller-config
+              - mountPath: /var/lib/avi/etc/setup.json
+                subPath: setup.json
+                name: controller-config
             securityContext:
               privileged: true
         serviceAccount: default
@@ -90,6 +96,9 @@ avi_controller_k8s_statefulset:
           - hostPath:
               path: /dev
             name: devroot
+          - configMap:
+              name: setup-json
+            name: controller-config
     volumeClaimTemplates:
       - metadata:
           name: vol
@@ -99,4 +108,4 @@ avi_controller_k8s_statefulset:
           storageClassName: "{{ avi_controller_storage_class_name }}"
           resources:
             requests:
-              storage: "{{ avi_controller_disk_size }}"
+              storage: "{{ avi_controller_disk_size }}Gi"

@@ -1,0 +1,29 @@
+---
+# tasks file for avinetworks.avicontroller_gke
+
+- name: Avi Controller | GKE | Check prerequisites
+  include_tasks: prerequisites.yml
+
+- name: Avi Controller | GKE | Remove controller addresses
+  gcp_compute_address:
+    name: "{{ avi_controller_prefix }}-{{ avi_namespace }}-{{ index }}"
+    region: "{{ avi_gcp_region }}"
+    project: "{{ avi_gcp_project }}"
+    auth_kind: "{{ avi_gcp_auth_kind }}"
+    service_account_file: "{{ avi_gcp_service_account_file }}"
+    address_type: EXTERNAL
+    state: absent
+  register: avi_gcp_compute_addresses
+  loop: "{{ range(0, avi_controller_count, 1)|list }}"
+  loop_control:
+    loop_var: index
+
+- name: Avi Controller | GKE | Delete controller namespace
+  k8s:
+    kind: Namespace
+    api_version: v1
+    name: "{{ avi_namespace }}"
+    state: absent
+  environment:
+    K8S_AUTH_KUBECONFIG: "{{ avi_k8s_auth_kubeconfig }}"
+    GOOGLE_APPLICATION_CREDENTIALS: "{{ avi_gcp_service_account_file }}"

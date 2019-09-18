@@ -3,5 +3,5 @@ avi_controller_k8s_namespace:
   kind: Namespace
   apiVersion: v1
   metadata:
-    labels: "{{ avi_controller_namespace_lables | default(omit) }}"
+    labels: "{{ avi_controller_namespace_labels | default(omit) }}"
     name: "{{ avi_namespace }}"

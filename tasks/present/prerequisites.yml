@@ -1,0 +1,10 @@
+---
+
+- name: Avi Controller | GKE | Assert correct controller count when none exist
+  assert:
+    that: avi_controller_count is odd
+    fail_msg: "Failed: Controller count must be odd number for a proper quorum"
+    success_msg: "Passed: Controller count is odd and will be a quorum"
+  when:
+    - avi_existing_statefulsets.resources is defined
+    - avi_existing_statefulsets.resources|count == 0

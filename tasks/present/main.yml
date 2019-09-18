@@ -1,0 +1,54 @@
+---
+# tasks file for avinetworks.avicontroller_gke
+
+- include_tasks: prerequisites.yml
+
+# This task creates the external IP address that will be used for each of the
+# controllers created. The index values here will be used in the statefulsets so
+# that all counts are the same.
+- name: Avi Controller | GKE | Present | Create controller addresses
+  gcp_compute_address:
+    name: "{{ avi_controller_prefix }}-{{ avi_namespace }}-{{ index }}"
+    region: "{{ avi_gcp_region }}"
+    project: "{{ avi_gcp_project }}"
+    auth_kind: "{{ avi_gcp_auth_kind }}"
+    service_account_file: "{{ avi_gcp_service_account_file }}"
+    address_type: EXTERNAL
+    state: present
+  register: avi_gcp_compute_addresses
+  loop: "{{ range(0, avi_controller_count, 1)|list }}"
+  loop_control:
+    loop_var: index
+
+- name: Avi Controller | GKE | Present | avi_setup_json value
+  debug: var=avi_setup_json
+  when: avi_setup_json is defined
+
+# We run this in a block because environment variables need created for all k8s
+# api calls due to GKE authentication being required for K8s api.
+- name: Avi Controller | GKE | Present | Deploy K8s components
+  block:
+    - name: Avi Controller | GKE | Present | Create Controller namespace
+      k8s:
+        state: present
+        resource_definition: "{{ avi_controller_k8s_namespace }}"
+    - name: Avi Controller | GKE | Present | Create ConfigMap for Controller setup.json
+      k8s:
+        state: present
+        resource_definition: "{{ avi_controller_k8s_configmap }}"
+    - name: Avi Controller | GKE | Present | Create Controller Storage Class
+      k8s:
+        state: present
+        resource_definition: "{{ avi_controller_k8s_storage_class }}"
+    - name: Avi Controller | GKE | Present | Create controller service
+      k8s:
+        state: present
+        resource_definition: "{{ avi_controller_k8s_service }}"
+# This step is looped for each of the addresses that were created earlier.
+    - name: Avi Controller | GKE | Present | Deploy the statefulsets
+      include_tasks: statefulset.yml
+      loop: "{{ avi_gcp_compute_addresses.results }}"
+
+  environment:
+    K8S_AUTH_KUBECONFIG: "{{ avi_k8s_auth_kubeconfig }}"
+    GOOGLE_APPLICATION_CREDENTIALS: "{{ avi_gcp_service_account_file }}"

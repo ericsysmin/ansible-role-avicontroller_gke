@@ -1,0 +1,8 @@
+---
+# tasks file for avinetworks.avicontroller_gke
+
+- include_tasks: prerequisites.yml
+
+- include_tasks: ../present/main.yml
+  vars:
+    avi_statefulset_replicas: 0

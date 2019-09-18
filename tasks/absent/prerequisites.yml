@@ -1,0 +1,91 @@
+---
+# This code was written to discover how many statefulsets exist in the namespace
+# however if the namespace does get deleted and a failure happens somewhere in the
+# pipeline, it's likely we will have a partially removed deployment and never be able
+# to remove the rest. Instead we should always assume 3 total nodes, and remove the
+# namespace and make sure any and all possible IP's are removed as well.
+# We also only attempt to connect to controller addresses that we've found.
+#
+# - name: Avi Controller | GKE | Get StatefulSets in Namespace
+#   k8s_facts:
+#     kind: StatefulSet
+#     namespace: "{{ avi_namespace }}"
+#     api_version: v1
+#   environment:
+#      K8S_AUTH_KUBECONFIG: "{{ avi_k8s_auth_kubeconfig }}"
+#      GOOGLE_APPLICATION_CREDENTIALS: "{{ avi_gcp_service_account_file }}"
+#   register: avi_namespace_statefulsets
+#
+#
+# - name: Avi Controller | GKE | Get controller count from StatefulSets in Namespace
+#   set_fact:
+#     avi_controller_count: "{{ avi_namespace_statefulsets|count }}"
+
+- name: Avi Controller | GKE | Get controller count from StatefulSets in Namespace
+  set_fact:
+    avi_controller_count: 3
+
+- name: Avi Controller | GKE | Get controller addresses
+  gcp_compute_address_facts:
+    region: "{{ avi_gcp_region }}"
+    project: "{{ avi_gcp_project }}"
+    auth_kind: "{{ avi_gcp_auth_kind }}"
+    service_account_file: "{{ avi_gcp_service_account_file }}"
+    filters:
+      - "name:{{ avi_controller_prefix }}-{{ avi_namespace }}*"
+  register: avi_gcp_compute_address_facts
+
+- block:
+    - name: Avi Controller | GKE | Remove deplyoment | Set the primary cluster controller
+      set_fact:
+        avi_deployment_controller: "{{ avi_gcp_compute_address_facts.resources[0].address }}"
+
+    - name: Avi Controller | GKE | Remove deployment | Check if deployment is reachable
+      uri:
+        url: https://{{ avi_deployment_controller }}/api/initial-data
+        method: GET
+        return_content: yes
+        validate_certs: no
+      register: initial_data
+      failed_when: false
+
+    - name: Avi Controller | GKE | Remove deployment | Verify no service engines exist
+      avi_api_session:
+        controller: "{{ avi_deployment_controller }}"
+        username: "{{ avi_controller_username }}"
+        avi_credentials:
+          password: "{{ avi_controller_password }}"
+        api_version: 17.2.13
+        http_method: get
+        tenant: "*"
+        path: serviceengine
+      register: serviceengine
+      when:
+        - initial_data.status == 200
+
+    - name: Avi Controller | GKE | Remove deployment | Verify no virtual services exist
+      avi_api_session:
+        controller: "{{ avi_deployment_controller }}"
+        username: "{{ avi_controller_username }}"
+        avi_credentials:
+          password: "{{ avi_controller_password }}"
+        api_version: 17.2.13
+        http_method: get
+        tenant: "*"
+        path: virtualservice
+      register: virtualservice
+      when:
+        - initial_data.status == 200
+
+    - name: Avi Controller | GKE | Remove deployment | Verify that no dependent objects exist
+      assert:
+        that:
+          - virtualservice.obj.count == 0
+          - serviceengine.obj.count == 0
+      when:
+        - virtualservice.obj is defined
+        - serviceengine.obj is defined
+  when:
+    - avi_gcp_compute_address_facts.resources|length > 0
+    - avi_controller_password is defined
+    - not avi_force_state

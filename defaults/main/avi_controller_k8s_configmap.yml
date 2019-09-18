@@ -1,0 +1,10 @@
+---
+avi_controller_k8s_configmap:
+  kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: setup-json
+    namespace: "{{ avi_namespace }}"
+  data:
+    setup.json: |-
+      {{ avi_setup_yaml|to_nice_json }}
